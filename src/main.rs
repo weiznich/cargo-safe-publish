@@ -19,6 +19,8 @@
 use std::io::Read;
 use std::process::{Command, Stdio};
 
+use flate2::read::GzDecoder;
+
 const APP_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 fn manifest_path() -> Option<String> {
@@ -88,7 +90,7 @@ fn main() {
         "Run cargo safe-publish for the crate `{package_name} {package_version} ({package_root})`",
     );
 
-    if is_no_verify {
+    if !is_no_verify {
         let mut dry_run_command = Command::new("cargo");
 
         dry_run_command
@@ -158,7 +160,8 @@ fn main() {
         .read_to_vec()
         .expect("Failed to fetch package");
 
-        let mut archive = tar::Archive::new(std::io::Cursor::new(body));
+        let zipped_archive = GzDecoder::new(std::io::Cursor::new(body));
+        let mut archive = tar::Archive::new(zipped_archive);
         for entry in archive
             .entries()
             .expect("Could not open uploaded `.crate` archive")
