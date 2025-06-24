@@ -170,7 +170,12 @@ fn main() {
             let mut entry = entry.expect("Failed to get file entry from tar archive");
 
             let path = entry.path().unwrap();
-            let local_path = package_root.join(path.display().to_string());
+            let local_path = package_root.join(
+                path.strip_prefix(format!("{package_name}-{package_version}"))
+                    .unwrap()
+                    .display()
+                    .to_string(),
+            );
             if local_path.exists() {
                 let mut uploaded_content = String::new();
                 entry
