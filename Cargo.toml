@@ -1,0 +1,13 @@
+[package]
+name = "cargo-safe-publish"
+version = "0.1.0"
+edition = "2024"
+license = "GPL-2.0-or-later"
+include = ["Cargo.toml", "Cargo.lock", "src/**.rs", "gpl-2.0.txt"]
+description = "A safer version of `cargo publish`"
+
+[dependencies]
+cargo_metadata = "0.20"
+ureq = "3.0"
+tar = "0.4.44"
+similar-asserts = "1.7"
