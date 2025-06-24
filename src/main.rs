@@ -16,13 +16,14 @@
 // along with this program; if not, see
 // <https://www.gnu.org/licenses/>.
 
+use flate2::read::GzDecoder;
+use std::collections::HashMap;
 use std::io::Read;
 use std::process::{Command, Stdio};
 
-use flate2::read::GzDecoder;
-
 const APP_VERSION: &str = env!("CARGO_PKG_VERSION");
-const CARGO_GENERATED_FILES: &[&str] = &[".cargo_vcs_info.json", "Cargo.toml.orig"];
+const CARGO_GENERATED_FILES: &[&str] = &[".cargo_vcs_info.json", "Cargo.toml"];
+const REMAP_FILES: [(&str, &str); 1] = [("Cargo.toml.orig", "Cargo.toml")];
 
 fn manifest_path() -> Option<String> {
     let mut args = std::env::args().skip_while(|c| !c.starts_with("--manifest-path"));
@@ -160,6 +161,7 @@ fn main() {
         .body_mut()
         .read_to_vec()
         .expect("Failed to fetch package");
+        let remapped_files = HashMap::from(REMAP_FILES);
 
         let zipped_archive = GzDecoder::new(std::io::Cursor::new(body));
         let mut archive = tar::Archive::new(zipped_archive);
@@ -169,13 +171,21 @@ fn main() {
         {
             let mut entry = entry.expect("Failed to get file entry from tar archive");
 
-            let path = entry.path().unwrap();
-            let local_path = package_root.join(
-                path.strip_prefix(format!("{package_name}-{package_version}"))
-                    .unwrap()
-                    .display()
-                    .to_string(),
-            );
+            let path = entry.path().unwrap().into_owned();
+            let mut local_path = path
+                .strip_prefix(format!("{package_name}-{package_version}"))
+                .unwrap()
+                .to_path_buf();
+
+            // we want to make sure that we compare `Cargo.toml.orig` to the local `Cargo.toml` as otherwise
+            // they don't match
+            if let Some(remap_file) =
+                remapped_files.get(path.file_name().unwrap().to_str().unwrap())
+            {
+                local_path = local_path.parent().unwrap().join(*remap_file);
+            }
+
+            let local_path = package_root.join(local_path.display().to_string());
             if local_path.exists() {
                 let mut uploaded_content = String::new();
                 entry
