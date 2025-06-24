@@ -22,6 +22,7 @@ use std::process::{Command, Stdio};
 use flate2::read::GzDecoder;
 
 const APP_VERSION: &str = env!("CARGO_PKG_VERSION");
+const CARGO_GENERATED_FILES: &[&str] = &[".cargo_vcs_info.json", "Cargo.toml.orig"];
 
 fn manifest_path() -> Option<String> {
     let mut args = std::env::args().skip_while(|c| !c.starts_with("--manifest-path"));
@@ -192,7 +193,8 @@ fn main() {
                     eprintln!("{diff}");
                     std::process::exit(1);
                 }
-            } else {
+            } else if !CARGO_GENERATED_FILES.contains(&path.file_name().unwrap().to_str().unwrap())
+            {
                 eprintln!(
                     "The file `{path}` does not exist in `{package_root}`. \
                          It seems to be added by the publication process. \
