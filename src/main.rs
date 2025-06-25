@@ -215,7 +215,11 @@ fn main() {
                 }
             }
         }
-        if !everything_matched {
+        if everything_matched {
+            println!();
+            println!("Successfully published and verified `{package_name}` ({package_version})");
+        } else {
+            eprintln!();
             eprintln!(
                 "Found a difference between the uploaded and the local version. \
                  Double check if thats desired, otherwise please yank \
