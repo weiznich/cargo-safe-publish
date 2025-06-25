@@ -19,13 +19,26 @@
 use colored::Colorize;
 use flate2::read::GzDecoder;
 use std::collections::HashMap;
+use std::ffi::OsStr;
 use std::io::Read;
+use std::os::unix::ffi::OsStrExt;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 
 const APP_VERSION: &str = env!("CARGO_PKG_VERSION");
 const CARGO_GENERATED_FILES: &[&str] = &[".cargo_vcs_info.json", "Cargo.toml"];
 const REMAP_FILES: [(&str, &str); 1] = [("Cargo.toml.orig", "Cargo.toml")];
+
+#[derive(serde_derive::Deserialize, Debug)]
+struct IncludeExcludeFromManifest {
+    package: PackageIncludeExelude,
+}
+
+#[derive(serde_derive::Deserialize, Debug)]
+struct PackageIncludeExelude {
+    include: Option<Vec<String>>,
+    exclude: Option<Vec<String>>,
+}
 
 fn manifest_path() -> Option<String> {
     let mut args = std::env::args().skip_while(|c| !c.starts_with("--manifest-path"));
@@ -198,6 +211,39 @@ fn get_git_root(package_root: &Path) -> Option<&Path> {
 
 fn check_git_is_dirty(package_root: &cargo_metadata::camino::Utf8Path) {
     if let Some(git_root) = get_git_root(&package_root.as_std_path()) {
+        let manifest = std::fs::read_to_string(package_root.join("Cargo.toml"))
+            .expect("Failed to read `Cargo.toml`");
+        let manifest: IncludeExcludeFromManifest =
+            toml::de::from_str(&manifest).expect("Failed to deserialize `Cargo.toml`");
+        if manifest.package.include.is_some() && manifest.package.exclude.is_some() {
+            eprintln!("{}: both `package.include` and `package.exclude` are set. Cargo will ignore `package.exclude` in this case", "warning".yellow());
+        }
+
+        let include = manifest.package.include.as_deref().map(|p| {
+            p.iter()
+                .fold(
+                    ignore::gitignore::GitignoreBuilder::new(package_root),
+                    |mut builder, i| {
+                        builder.add_line(None, i).unwrap();
+                        builder
+                    },
+                )
+                .build()
+                .unwrap()
+        });
+        let exclude = manifest.package.exclude.as_deref().map(|p| {
+            p.iter()
+                .fold(
+                    ignore::gitignore::GitignoreBuilder::new(package_root),
+                    |mut builder, i| {
+                        builder.add_line(None, i).unwrap();
+                        builder
+                    },
+                )
+                .build()
+                .unwrap()
+        });
+
         let (patterns, sub_dir) = if package_root == git_root {
             (
                 Box::new(std::iter::empty()) as Box<dyn Iterator<Item = _>>,
@@ -224,6 +270,47 @@ fn check_git_is_dirty(package_root: &cargo_metadata::camino::Utf8Path) {
             .untracked_files(gix::status::UntrackedFiles::Files)
             .into_iter(patterns)
             .expect("Failed to get repo state")
+            .filter_map(|i| {
+                let item = match i {
+                    Ok(i) => i,
+                    Err(e) => return Some(Err(e)),
+                };
+                let mut path = item.location();
+
+                if let Some(sub_dir) = &sub_dir {
+                    path = gix::diff::object::bstr::BStr::new(
+                        path.strip_prefix(sub_dir.as_slice()).unwrap(),
+                    );
+                    path = gix::diff::object::bstr::BStr::new(
+                        path.strip_prefix(&[std::path::MAIN_SEPARATOR as u8])
+                            .unwrap(),
+                    );
+                }
+                // we don't want to filter out submodule modifications, so just don't check if they are included or not
+                if !matches!(
+                    &item,
+                    gix::status::Item::IndexWorktree(
+                        gix::status::index_worktree::Item::Modification {
+                            status:
+                            gix::status::plumbing::index_as_worktree::EntryStatus::Change(gix::status::plumbing::index_as_worktree::Change::SubmoduleModification{..}),
+                            ..
+                        })
+                ) {
+                    let path_to_check = &Path::new(OsStr::from_bytes(path));
+                    let is_dir = false;
+                    if let Some(includes) = &include {
+                        if !includes.matched_path_or_any_parents(path_to_check, is_dir).is_ignore() {
+                            return None;
+                        }
+                    } else if let Some(excludes) = &exclude {
+                        if excludes.matched_path_or_any_parents(path_to_check, is_dir).is_ignore() {
+                            return None;
+                        }
+                    }
+                }
+                let path = path.to_owned();
+                Some(Ok((item, path)))
+            })
             .collect::<Result<Vec<_>, _>>()
             .expect("Failed to get repo state");
 
@@ -236,17 +323,7 @@ fn check_git_is_dirty(package_root: &cargo_metadata::camino::Utf8Path) {
                 status.len()
             );
             eprintln!();
-            for item in status {
-                let mut path = item.location();
-                if let Some(sub_dir) = &sub_dir {
-                    path = gix::diff::object::bstr::BStr::new(
-                        path.strip_prefix(sub_dir.as_slice()).unwrap(),
-                    );
-                    path = gix::diff::object::bstr::BStr::new(
-                        path.strip_prefix(&[std::path::MAIN_SEPARATOR as u8])
-                            .unwrap(),
-                    );
-                }
+            for (item, path) in status {
                 let modification_kind = match &item {
                     gix::status::Item::IndexWorktree(
                         gix::status::index_worktree::Item::DirectoryContents { entry, .. },
