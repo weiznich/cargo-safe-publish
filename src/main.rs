@@ -116,7 +116,7 @@ fn main() {
                 eprintln!(
                     "Dry run returned a non-zero exist code, check the output above for details"
                 );
-                std::process::exit(1);
+                std::process::exit(s.code().unwrap_or(1));
             }
             Ok(_) => {}
         }
@@ -147,7 +147,7 @@ fn main() {
                 eprintln!(
                     "Dry run returned a non-zero exist code, check the output above for details"
                 );
-                std::process::exit(1);
+                std::process::exit(s.code().unwrap_or(1));
             }
             Ok(_) => {}
         }
@@ -165,6 +165,7 @@ fn main() {
 
         let zipped_archive = GzDecoder::new(std::io::Cursor::new(body));
         let mut archive = tar::Archive::new(zipped_archive);
+        let mut everything_matched = true;
         for entry in archive
             .entries()
             .expect("Could not open uploaded `.crate` archive")
@@ -172,7 +173,7 @@ fn main() {
             let mut entry = entry.expect("Failed to get file entry from tar archive");
 
             let path = entry.path().unwrap().into_owned();
-            let mut local_path = path
+            let mut package_local_path = path
                 .strip_prefix(format!("{package_name}-{package_version}"))
                 .unwrap()
                 .to_path_buf();
@@ -182,43 +183,45 @@ fn main() {
             if let Some(remap_file) =
                 remapped_files.get(path.file_name().unwrap().to_str().unwrap())
             {
-                local_path = local_path.parent().unwrap().join(*remap_file);
+                package_local_path = package_local_path.parent().unwrap().join(*remap_file);
             }
 
-            let local_path = package_root.join(local_path.display().to_string());
-            if local_path.exists() {
-                let mut uploaded_content = String::new();
-                entry
-                    .read_to_string(&mut uploaded_content)
-                    .expect("Failed to read file from tar archive");
-                let local_content =
-                    std::fs::read_to_string(local_path).expect("Could not read local file");
-                if local_content != uploaded_content {
-                    let diff = similar_asserts::SimpleDiff::from_str(
-                        &local_content,
-                        &uploaded_content,
-                        "Local version",
-                        "Uploaded version",
-                    );
+            let local_path = package_root.join(package_local_path.display().to_string());
+            if !CARGO_GENERATED_FILES.contains(&path.file_name().unwrap().to_str().unwrap()) {
+                if local_path.exists() {
+                    let mut uploaded_content = String::new();
+                    entry
+                        .read_to_string(&mut uploaded_content)
+                        .expect("Failed to read file from tar archive");
+                    let local_content =
+                        std::fs::read_to_string(local_path).expect("Could not read local file");
+                    if local_content != uploaded_content {
+                        let diff = similar_asserts::SimpleDiff::from_str(
+                            &local_content,
+                            &uploaded_content,
+                            "Local version",
+                            "Uploaded version",
+                        );
+                        eprintln!("Found differences in `{}`:", package_local_path.display());
+                        eprintln!("{diff}");
+                        everything_matched = false;
+                    }
+                } else {
                     eprintln!(
-                        "Found a difference between the uploaded and the local version. \
-                                   Double check if thats desired, otherwise please yank \
-                                   version {package_version} of `{package_name}`"
+                        "The file `{path}` does not exist in `{package_root}`",
+                        path = package_local_path.display()
                     );
-                    eprintln!("{diff}");
-                    std::process::exit(1);
+                    everything_matched = false;
                 }
-            } else if !CARGO_GENERATED_FILES.contains(&path.file_name().unwrap().to_str().unwrap())
-            {
-                eprintln!(
-                    "The file `{path}` does not exist in `{package_root}`. \
-                         It seems to be added by the publication process. \
-                         Double check if thats desired, otherwise please yank \
-                         version {package_version} of `{package_name}`",
-                    path = path.display()
-                );
-                std::process::exit(1);
             }
+        }
+        if !everything_matched {
+            eprintln!(
+                "Found a difference between the uploaded and the local version. \
+                 Double check if thats desired, otherwise please yank \
+                 version {package_version} of `{package_name}`"
+            );
+            std::process::exit(1);
         }
     }
 }

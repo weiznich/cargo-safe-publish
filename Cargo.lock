@@ -63,7 +63,7 @@ dependencies = [
 
 [[package]]
 name = "cargo-safe-publish"
-version = "0.1.4"
+version = "0.1.5"
 dependencies = [
  "cargo_metadata",
  "flate2",
