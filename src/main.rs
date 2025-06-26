@@ -19,9 +19,7 @@
 use colored::Colorize;
 use flate2::read::GzDecoder;
 use std::collections::HashMap;
-use std::ffi::OsStr;
 use std::io::Read;
-use std::os::unix::ffi::OsStrExt;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 
@@ -322,7 +320,7 @@ fn check_git_is_dirty(package_root: &cargo_metadata::camino::Utf8Path) {
                             ..
                         })
                 ) {
-                    let path_to_check = &Path::new(OsStr::from_bytes(path));
+                    let path_to_check = <[u8] as gix::diff::object::bstr::ByteSlice>::to_path(path).expect("Valid OsStr");
                     let is_dir = false;
                     if let Some(includes) = &include {
                         if !includes.matched_path_or_any_parents(path_to_check, is_dir).is_ignore() {
@@ -412,6 +410,8 @@ fn main() {
             .map(PathBuf::from)
             .and_then(|p| p.parent().map(|p| p.to_owned()))
             .unwrap_or_else(|| std::env::current_dir().unwrap());
+        // necessary to allow relative paths
+        let check_path = check_path.clone().canonicalize().unwrap_or(check_path);
         metadata
             .packages
             .iter()
