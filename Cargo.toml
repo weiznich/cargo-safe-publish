@@ -22,3 +22,8 @@ toml = "0.8"
 serde_derive = "1"
 serde = "1"
 ignore = "0.4"
+
+# The profile that 'dist' will build with
+[profile.dist]
+inherits = "release"
+lto = "thin"
