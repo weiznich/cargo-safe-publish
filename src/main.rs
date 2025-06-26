@@ -159,7 +159,10 @@ fn run_publish() {
             std::process::exit(1);
         }
         Ok(s) if !s.success() => {
-            eprintln!("{}: publish run returned a non-zero exist code, check the output above for details", "error".red().bold());
+            eprintln!(
+                "{}: publish run returned a non-zero exist code, check the output above for details",
+                "error".red().bold()
+            );
             std::process::exit(s.code().unwrap_or(1));
         }
         Ok(_) => {}
@@ -236,7 +239,10 @@ fn check_git_is_dirty(package_root: &cargo_metadata::camino::Utf8Path) {
         let manifest: IncludeExcludeFromManifest =
             toml::de::from_str(&manifest).expect("Failed to deserialize `Cargo.toml`");
         if manifest.package.include.is_some() && manifest.package.exclude.is_some() {
-            eprintln!("{}: both `package.include` and `package.exclude` are set. Cargo will ignore `package.exclude` in this case", "warning".yellow());
+            eprintln!(
+                "{}: both `package.include` and `package.exclude` are set. Cargo will ignore `package.exclude` in this case",
+                "warning".yellow()
+            );
         }
 
         let include = manifest.package.include.as_deref().map(|p| {
