@@ -111,7 +111,7 @@ dependencies = [
 
 [[package]]
 name = "cargo-safe-publish"
-version = "0.1.7"
+version = "0.1.8"
 dependencies = [
  "cargo_metadata",
  "colored",

@@ -166,7 +166,11 @@ fn run_publish() {
     }
 }
 
-fn run_verification_build() {
+fn run_verification_build(
+    target_directory: &Path,
+    package_name: &str,
+    package_version: &cargo_metadata::semver::Version,
+) {
     let mut dry_run_command = Command::new("cargo");
 
     dry_run_command
@@ -195,6 +199,22 @@ fn run_verification_build() {
         }
         Ok(_) => {}
     }
+
+    // cargo should remove these files on it's own on the new call to `cargo publish` with the same version
+    // but we better make sure that they are gone instead of relying on that behavior
+    let unpacked_target_package = target_directory
+        .join("package")
+        .join(format!("{package_name}-{package_version}"));
+    let target_package = target_directory
+        .join("package")
+        .join(format!("{package_name}-{package_version}.crate"));
+
+    std::fs::remove_dir_all(unpacked_target_package).expect(
+        "Failed to remove unpacked package from the target directory during the verification build",
+    );
+    std::fs::remove_file(target_package).expect(
+        "Failed to remove the packed crate from the target directory during the verification build",
+    );
 }
 
 fn get_git_root(package_root: &Path) -> Option<&Path> {
@@ -210,7 +230,7 @@ fn get_git_root(package_root: &Path) -> Option<&Path> {
 }
 
 fn check_git_is_dirty(package_root: &cargo_metadata::camino::Utf8Path) {
-    if let Some(git_root) = get_git_root(&package_root.as_std_path()) {
+    if let Some(git_root) = get_git_root(package_root.as_std_path()) {
         let manifest = std::fs::read_to_string(package_root.join("Cargo.toml"))
             .expect("Failed to read `Cargo.toml`");
         let manifest: IncludeExcludeFromManifest =
@@ -371,13 +391,13 @@ fn main() {
     let metadata = metadata_command
         .exec()
         .expect("Failed to get project metadata");
+    let target_directory = &metadata.target_directory;
     let package_flag = package_flag();
     let package_to_publish = if let Some(package_flag) = package_flag {
         metadata
             .packages
             .iter()
-            .filter_map(|p| (p.name.as_str() == package_flag).then_some(p))
-            .next()
+            .find(|p| p.name.as_str() == package_flag)
             .unwrap_or_else(|| panic!("No package with name `{package_flag}` found"))
     } else if metadata.packages.len() == 1 {
         &metadata.packages[0]
@@ -389,8 +409,7 @@ fn main() {
         metadata
             .packages
             .iter()
-            .filter_map(|p| (p.manifest_path.parent().unwrap() == check_path).then_some(p))
-            .next()
+            .find(|p| p.manifest_path.parent().unwrap() == check_path)
             .unwrap_or_else(|| panic!("Could not identify package to publish"))
     };
     let package_root = package_to_publish.manifest_path.parent().unwrap();
@@ -405,7 +424,11 @@ fn main() {
     }
 
     if !is_no_verify {
-        run_verification_build();
+        run_verification_build(
+            target_directory.as_std_path(),
+            package_name.as_str(),
+            package_version,
+        );
     }
 
     if !is_dry_run && !is_help {
