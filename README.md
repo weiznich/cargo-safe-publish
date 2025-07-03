@@ -10,6 +10,23 @@ A safer version of `cargo publish`.
 
 See [the announcement blog post](https://blog.weiznich.de//cargo-safe-publish/) for details.
 
+## Installation
+
+`cargo safe-publish` can be installed as pre-build binary via `cargo binstall cargo-safe-publish` or via the following scripts:
+
+**Linux/MacOS**:
+```sh
+curl --proto '=https' --tlsv1.2 -LsSf https://github.com/weiznich/cargo-safe-publish/releases/latest/download/cargo-safe-publish-installer.sh | sh
+```
+
+**Windows**:
+
+``` sh
+powershell -ExecutionPolicy Bypass -c "irm https://github.com/weiznich/cargo-safe-publish/releases/latest/download/cargo-safe-publish-installer.ps1 | iex"
+```
+
+Alternatively you can build it from source via `cargo install --locked cargo-safe-publish`.
+
 ## License
 
 Licensed under [GPL-2 or later](https://www.gnu.org/licenses/old-licenses/gpl-2.0.html)
