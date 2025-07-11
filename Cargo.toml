@@ -1,6 +1,6 @@
 [package]
 name = "cargo-safe-publish"
-version = "0.1.10"
+version = "0.1.11"
 edition = "2024"
 license = "GPL-2.0-or-later"
 include = ["Cargo.toml", "Cargo.lock", "src/**.rs", "gpl-2.0.txt", "README.md"]
@@ -12,6 +12,7 @@ repository = "https://github.com/weiznich/cargo-safe-publish"
 
 [dependencies]
 cargo_metadata = "0.21"
+cargo_toml = "0.22.1"
 ureq = "3.0"
 tar = "0.4.44"
 similar-asserts = "1.7"

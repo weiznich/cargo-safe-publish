@@ -111,9 +111,10 @@ dependencies = [
 
 [[package]]
 name = "cargo-safe-publish"
-version = "0.1.10"
+version = "0.1.11"
 dependencies = [
  "cargo_metadata",
+ "cargo_toml",
  "colored",
  "flate2",
  "gix",
@@ -155,6 +156,16 @@ dependencies = [
  "serde",
  "serde_json",
  "thiserror",
+]
+
+[[package]]
+name = "cargo_toml"
+version = "0.22.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "02260d489095346e5cafd04dea8e8cb54d1d74fcd759022a9b72986ebe9a1257"
+dependencies = [
+ "serde",
+ "toml 0.8.23",
 ]
 
 [[package]]
