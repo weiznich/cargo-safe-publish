@@ -1,6 +1,6 @@
 [package]
 name = "cargo-safe-publish"
-version = "0.1.11"
+version = "0.1.12"
 edition = "2024"
 license = "GPL-2.0-or-later"
 include = ["Cargo.toml", "Cargo.lock", "src/**.rs", "gpl-2.0.txt", "README.md"]
@@ -17,7 +17,7 @@ ureq = "3.0"
 tar = "0.4.44"
 similar-asserts = "1.7"
 flate2 = { version = "1.1.1", default-features = false, features = ["zlib-rs"] }
-gix = { version = "0.72", default-features = false, features = ["status"] }
+gix = { version = "0.73", default-features = false, features = ["status"] }
 colored = "3.0"
 toml = "0.9"
 serde_derive = "1"
