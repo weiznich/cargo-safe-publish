@@ -273,9 +273,9 @@ fn check_git_is_dirty(package_root: &cargo_metadata::camino::Utf8Path) {
 
         if include.is_some() && exclude.is_some() {
             eprintln!(
-                    "{}: both `package.include` and `package.exclude` are set. Cargo will ignore `package.exclude` in this case",
-                    "warning".yellow()
-                );
+                "{}: both `package.include` and `package.exclude` are set. Cargo will ignore `package.exclude` in this case",
+                "warning".yellow()
+            );
         }
 
         let include = include.map(|p| {
