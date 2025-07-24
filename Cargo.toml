@@ -1,6 +1,6 @@
 [package]
 name = "cargo-safe-publish"
-version = "0.1.12"
+version = "0.1.13"
 edition = "2024"
 license = "GPL-2.0-or-later"
 include = ["Cargo.toml", "Cargo.lock", "src/**.rs", "gpl-2.0.txt", "README.md"]

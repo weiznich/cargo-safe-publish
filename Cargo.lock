@@ -99,7 +99,7 @@ dependencies = [
 
 [[package]]
 name = "cargo-safe-publish"
-version = "0.1.12"
+version = "0.1.13"
 dependencies = [
  "cargo_metadata",
  "cargo_toml",

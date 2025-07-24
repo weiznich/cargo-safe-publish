@@ -165,7 +165,10 @@ fn run_publish() {
         .stderr(Stdio::inherit());
 
     // append all the other flags
-    for arg in std::env::args().skip(1).filter(|c| c != "--no-verify") {
+    for arg in std::env::args()
+        .skip(1)
+        .filter(|c| c != "--no-verify" && c != "safe-publish")
+    {
         publish_command.arg(arg);
     }
 
@@ -201,7 +204,10 @@ fn run_verification_build(
         .stdout(Stdio::inherit());
 
     // append all the other flags
-    for arg in std::env::args().skip(1).filter(|c| c != "--dry-run") {
+    for arg in std::env::args()
+        .skip(1)
+        .filter(|c| c != "--dry-run" && c != "safe-publish")
+    {
         dry_run_command.arg(arg);
     }
     println!("Run verification build with the following command: `{dry_run_command:?}`");
@@ -416,6 +422,11 @@ fn main() {
     let is_no_verify = std::env::args().any(|c| c == "--no-verify");
     let is_help = std::env::args().any(|c| c == "--help" || c == "-h");
     let is_allow_dirty = std::env::args().any(|c| c == "--allow-dirty");
+    let is_version = std::env::args().any(|c| c == "--version" || c == "-v");
+    if is_version {
+        println!("cargo safe-publish {}", env!("CARGO_PKG_VERSION"));
+        return;
+    }
 
     let manifest_path = manifest_path();
 
