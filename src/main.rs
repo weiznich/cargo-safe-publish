@@ -134,7 +134,7 @@ fn verify_content_matches(
 
 fn compare_content(
     everything_matched: &mut bool,
-    package_local_path: &PathBuf,
+    package_local_path: &Path,
     uploaded_content: String,
     local_content: String,
 ) {
