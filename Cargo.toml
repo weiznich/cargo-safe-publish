@@ -11,7 +11,7 @@ keywords = ["cargo", "cli"]
 repository = "https://github.com/weiznich/cargo-safe-publish"
 
 [dependencies]
-cargo_metadata = "0.21"
+cargo_metadata = "0.22"
 cargo_toml = "0.22.1"
 ureq = "3.0"
 tar = "0.4.44"
